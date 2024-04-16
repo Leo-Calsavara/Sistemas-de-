@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <fstream>
+#include <string.h>
 
 using namespace std;
 
@@ -95,11 +96,11 @@ class File_system {
     }
 
     int get_data_position() {
-      return (1 + this->sectors_to_root_dir + this->sectors_to_bitmap) * this->bytes_per_sector;
+      return (14 + this->sectors_to_bitmap) * this->bytes_per_sector;
     }
 
     int get_bitmap_position() {
-      return this->sectors_to_bitmap * this->bytes_per_sector; 
+      return 14 * this->bytes_per_sector; 
     }
 
   public:
@@ -114,12 +115,10 @@ class File_system {
       this->initialize_variables(file_system_name, total_sectors_amount);
     }
 
-    int copy_disk_to_system(char *insert_file_name) {
+    int copy_disk_to_system(char insert_file_name[30]) {
       FILE *insert_file, *system_file;
       root_directoty_entrie aux_entrie;
       bit_variable reader_bits;
-
-      cout << insert_file_name << "\n";
 
       insert_file = fopen(insert_file_name, "r");
 
@@ -129,16 +128,17 @@ class File_system {
 
       system_file = fopen(this->file_system_name, "r+");
 
-      int sectors_needed_to_data = file_size / bytes_per_sector;
+      int sectors_needed_to_data = ceil(float(file_size) / float(bytes_per_sector)); // CONFERIR ISSO AQUI AAAAAAAAAAAAA
 
       fseek(system_file, 512, SEEK_SET);
-      int has_space_in_rd = 0;
+      int has_space_in_rd = 0, rd_new_file_position;
 
       for(int i = 0; i < 192; i++) {
-        fread(&aux_entrie, sizeof(aux_entrie), 1, system_file);
+        fread(&aux_entrie, 32, 1, system_file);
 
         if (aux_entrie.name[0] == 0 || aux_entrie.name[0] == 0xE5) {
           has_space_in_rd= 1;
+          rd_new_file_position = i;
           break;
         }
       }
@@ -150,7 +150,7 @@ class File_system {
       fseek(system_file, this->get_bitmap_position(), SEEK_SET);
       int sectors_in_system_to_data = this->total_sectors_amount - 14 - this->sectors_to_bitmap;
 
-      int contiguos_free_sectors = 0, has_space_in_bitmap = 0, free_bitmap_position;
+      int contiguos_free_sectors = 0, has_space_in_bitmap = 0, free_sector_data_position, position_newfile_bitmap;
       char reader, verify = 0;
 
       for(int i = 0; i < (sectors_in_system_to_data * bytes_per_sector); i++) {
@@ -161,8 +161,9 @@ class File_system {
 
           if (contiguos_free_sectors == sectors_needed_to_data) {
             has_space_in_bitmap = 1;
-            free_bitmap_position = i + j - sectors_needed_to_data + this->get_data_position();
-            cout << "Free bitmap position: " << free_bitmap_position << "\n";
+            position_newfile_bitmap = i + j - sectors_needed_to_data;
+            cout << i << " + " << j << " - " << sectors_needed_to_data <<"\n";
+            free_sector_data_position = ((i + j - sectors_needed_to_data) * 512) + this->get_data_position();
             break;
           }
 
@@ -181,21 +182,31 @@ class File_system {
       char teste[32];
       int how_many;
       fseek(insert_file, 0, SEEK_SET);
-      fseek(system_file, free_bitmap_position, SEEK_SET);
+      fseek(system_file, free_sector_data_position, SEEK_SET);
 
-      for(int i = 0; i < (file_size/32); i++) {
-
-        if(i == file_size/32 - 1) {
-          fread(&teste, (i%(file_size)/32), 1, insert_file);
+      for(int i = 0; i <= (file_size/32); i++) {
+        if(i == file_size/32) {
+          fread(&teste, file_size%32 , 1, insert_file);
+          how_many = fwrite(teste, file_size%32, 1, system_file);
         }
         else {
           fread(&teste, sizeof(teste), 1, insert_file);
+          how_many = fwrite(teste, sizeof(teste), 1, system_file);
         }
-
-        how_many = fwrite(teste, sizeof(teste), 1, system_file);
-
-        cout << "How many: " << how_many << "\n";
       }
+
+      fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512), SEEK_SET);
+      
+      fread(&reader, sizeof(reader), 1, system_file);
+
+      fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512), SEEK_SET);
+
+      reader ^= (1 << position_newfile_bitmap%512);
+
+      fwrite(&reader, sizeof(reader), 1, system_file);
+
+      fseek(system_file, 512 + (rd_new_file_position*32), SEEK_SET);
+      fwrite(insert_file_name, strlen(insert_file_name)-4, 1, system_file);
     
       fclose(system_file);
       fclose(insert_file);
@@ -206,18 +217,19 @@ class File_system {
 
 int main()
 {
-  char file_system_name[30], file_name[30];
+  char file_system_name[30] = "teste.img", file_name[30] = "teste.txt";
+
   FILE *file;
   
   int amount_of_sectors = 20;
 
-  cout << "Nome do Sistema de Arquivos: ";
-  scanf("%s", file_system_name);
+  //cout << "Nome do Sistema de Arquivos: ";
+  //scanf("%s", file_system_name);
 
-  cout << "Nome do Arquio a ser inserido: ";
-  scanf("%s", file_name);
+  //cout << "Nome do Arquio a ser inserido: ";
+  //scanf("%s", file_name);
 
-  File_system file_system (file_system_name);
+  File_system file_system (file_system_name, amount_of_sectors);
 
   file_system.copy_disk_to_system(file_name);
 
