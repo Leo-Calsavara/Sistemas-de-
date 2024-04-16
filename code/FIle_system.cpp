@@ -150,7 +150,7 @@ class File_system {
       fseek(system_file, this->get_bitmap_position(), SEEK_SET);
       int sectors_in_system_to_data = this->total_sectors_amount - 14 - this->sectors_to_bitmap;
 
-      int contiguos_free_sectors = 0;
+      int contiguos_free_sectors = 0, has_space_in_bitmap = 0, free_bitmap_position;
       char reader, verify = 0;
 
       for(int i = 0; i < (sectors_in_system_to_data * bytes_per_sector); i++) {
@@ -159,13 +159,39 @@ class File_system {
         for(int j = 0; j < 8; j++) {
           verify = get_bit(reader, (j % 8)); // verifica os 8 bits de cada byte
 
-          if(!verify) {
-            contiguos_free_sectors++;
+          if (contiguos_free_sectors == sectors_needed_to_data) {
+            has_space_in_bitmap = 1;
+            free_bitmap_position = i + j - sectors_needed_to_data + this->get_data_position();
+            cout << "Free bitmap position: " << free_bitmap_position << "\n";
+            break;
           }
-          else {contiguos_free_sectors = 0;}
+
+          if(!verify) contiguos_free_sectors++;
+          
+          else contiguos_free_sectors = 0;
         }
+
+        if (has_space_in_bitmap) {break;}
       }
-      
+
+      if(has_space_in_bitmap == 0) {
+        return 0;
+      }
+
+      char teste[32];
+      int how_many
+
+      //for(int i = 0; i < ) {
+        fseek(insert_file, 0, SEEK_SET);
+        fread(&teste, sizeof(teste), 1, insert_file);
+        cout << teste << "\n";
+
+        fseek(system_file, free_bitmap_position, SEEK_SET);
+        how_many = fwrite(teste, sizeof(teste), 1, system_file);
+
+        cout << "How many: " << how_many << "\n";
+      //}
+    
       fclose(system_file);
       fclose(insert_file);
 
@@ -183,9 +209,12 @@ int main()
   cout << "Nome do Sistema de Arquivos: ";
   scanf("%s", file_system_name);
 
-  File_system file_system (file_system_name, 20);
+  cout << "Nome do Arquio a ser inserido: ";
+  scanf("%s", file_name);
 
-  //file_system.copy_disk_to_system(file_system_name);
+  File_system file_system (file_system_name);
+
+  file_system.copy_disk_to_system(file_name);
 
   return 0;
 }
