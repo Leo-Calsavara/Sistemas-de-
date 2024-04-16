@@ -123,17 +123,17 @@ class File_system {
       insert_file = fopen(insert_file_name, "r");
 
       fseek(insert_file, 0, SEEK_END); // vai para o fim do arquivo
-      int file_size = ftell(insert_file); // retorna onde o ponteiro esta (fim do arquivo)
+      int file_size = ftell(insert_file); // retorna onde o ponteiro esta (fim do arquivo), ou seja o tamanho do arquivo que queremos inserir
       cout << "Tamanho do arquivo: " << file_size << "\n";
 
-      system_file = fopen(this->file_system_name, "r+");
+      system_file = fopen(this->file_system_name, "r+"); 
 
-      int sectors_needed_to_data = ceil(float(file_size) / float(bytes_per_sector)); // CONFERIR ISSO AQUI AAAAAAAAAAAAA
+      int sectors_needed_to_data = ceil(float(file_size) / float(bytes_per_sector));
 
-      fseek(system_file, 512, SEEK_SET);
+      fseek(system_file, 512, SEEK_SET); // vai para o root dir
       int has_space_in_rd = 0, rd_new_file_position;
 
-      for(int i = 0; i < 192; i++) {
+      for(int i = 0; i < 192; i++) { // verifica se ha espaço para inserção de mais um arquivo
         fread(&aux_entrie, 32, 1, system_file);
 
         if (aux_entrie.name[0] == 0 || aux_entrie.name[0] == 0xE5) {
@@ -142,71 +142,77 @@ class File_system {
           break;
         }
       }
-
-      if(has_space_in_rd == 0) {
-        return 0;
+      if(has_space_in_rd == 0) {// se nao houver espaco no root dir return
+        return 0; 
       }
 
-      fseek(system_file, this->get_bitmap_position(), SEEK_SET);
+      fseek(system_file, this->get_bitmap_position(), SEEK_SET); // vai para o bitmap
       int sectors_in_system_to_data = this->total_sectors_amount - 14 - this->sectors_to_bitmap;
-
       int contiguos_free_sectors = 0, has_space_in_bitmap = 0, free_sector_data_position, position_newfile_bitmap;
       char reader, verify = 0;
 
-      for(int i = 0; i < (sectors_in_system_to_data * bytes_per_sector); i++) {
+      for(int i = 0; i < (sectors_in_system_to_data * bytes_per_sector); i++) { // verifica se ha o espaco contiguo necessario para insercao
         fread(&reader, sizeof(reader), 1, system_file); // Le cada byte
 
         for(int j = 0; j < 8; j++) {
           verify = get_bit(reader, (j % 8)); // verifica os 8 bits de cada byte
 
-          if (contiguos_free_sectors == sectors_needed_to_data) {
+          if (contiguos_free_sectors == sectors_needed_to_data) { // Caso ja tenha o espaco necessario 
             has_space_in_bitmap = 1;
-            position_newfile_bitmap = i + j - sectors_needed_to_data;
-            cout << i << " + " << j << " - " << sectors_needed_to_data <<"\n";
-            free_sector_data_position = ((i + j - sectors_needed_to_data) * 512) + this->get_data_position();
-            break;
+            position_newfile_bitmap = i + j - sectors_needed_to_data; // ARMAZENA QUAL POSICAO DO BITMAP VAI SER UTILIZADA PARA ALOCAR OS DADOS
+            free_sector_data_position = ((i + j - sectors_needed_to_data) * 512) + this->get_data_position(); // posicao absoluta de onde os dados devem começar ser escritos
+            break; // Sai da verificacao 
           }
 
           if(!verify) contiguos_free_sectors++;
-          
           else contiguos_free_sectors = 0;
         }
 
-        if (has_space_in_bitmap) {break;}
+        if (has_space_in_bitmap) {break;} // Sai da verificacao 
       }
 
       if(has_space_in_bitmap == 0) {
-        return 0;
+        return 0; // se nao houver espaco para os dados return
       }
 
       char teste[32];
-      int how_many;
-      fseek(insert_file, 0, SEEK_SET);
-      fseek(system_file, free_sector_data_position, SEEK_SET);
+      fseek(insert_file, 0, SEEK_SET); // posicao 0 do arquivo a ser inserido
+      fseek(system_file, free_sector_data_position, SEEK_SET); // posicao absoluta de onde os dados começam 
 
-      for(int i = 0; i <= (file_size/32); i++) {
-        if(i == file_size/32) {
-          fread(&teste, file_size%32 , 1, insert_file);
-          how_many = fwrite(teste, file_size%32, 1, system_file);
+      for(int i = 0; i <= (file_size/32); i++) { // para cada 32 bytes de dados a ser inseridos
+
+        if(i == file_size/32) { // se estiver no fim do dado a ser inserido e ele não ocupar exatamente 32 bytes
+          fread(&teste, file_size%32 , 1, insert_file); // le e escreve apenas os bytes restantes
+          fwrite(teste, file_size%32, 1, system_file);
         }
         else {
           fread(&teste, sizeof(teste), 1, insert_file);
-          how_many = fwrite(teste, sizeof(teste), 1, system_file);
+          fwrite(teste, sizeof(teste), 1, system_file);
         }
       }
 
-      fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512), SEEK_SET);
-      
-      fread(&reader, sizeof(reader), 1, system_file);
+      for(int i = 0; i <= (sectors_needed_to_data / 8); i++) {
+        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512), SEEK_SET); // vai na posicao do BYTE onde o bitmap deve ser marcado
+        fread(&reader, sizeof(reader), 1, system_file);
+        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512), SEEK_SET);
 
-      fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512), SEEK_SET);
+        if (i == sectors_needed_to_data / 8){ // se estiver nos ultimos setores e ele nao ocupar exatamente os 8 bits
+            for(int bit = 0; bit < sectors_needed_to_data % 8; bit++){ // seta apenas os bits restantes 
+              reader ^= (1 << position_newfile_bitmap % 8 + bit); // o bit da posicao (position_newfile_bitmap % 8 + bit) é setado para 1
+          }
+        }
 
-      reader ^= (1 << position_newfile_bitmap%512);
+        else {
+            for(int bit = 0; bit < 8; bit++){ // isso da errado quando o bit a ser inserido não é o primeiro bit daquele byte (VOU ARRUMAR)
+              reader ^= (1 << position_newfile_bitmap % 8 + bit); // o bit da posicao (position_newfile_bitmap % 8 + bit) é setado para 1
+          }
+        }
+        // printf("reader %d\n", reader);
+        fwrite(&reader, sizeof(reader), 1, system_file); // reescreve o byte com a alteração do bit
+      }
 
-      fwrite(&reader, sizeof(reader), 1, system_file);
-
-      fseek(system_file, 512 + (rd_new_file_position*32), SEEK_SET);
-      fwrite(insert_file_name, strlen(insert_file_name)-4, 1, system_file);
+      fseek(system_file, 512 + (rd_new_file_position*32), SEEK_SET); // insere o nome no root dir 
+      fwrite(insert_file_name, strlen(insert_file_name)-4, 1, system_file); // strlen -4 para retirar o ".txt"
     
       fclose(system_file);
       fclose(insert_file);
@@ -217,21 +223,25 @@ class File_system {
 
 int main()
 {
-  char file_system_name[30] = "teste.img", file_name[30] = "teste.txt";
+  char file_system_name[30] = "teste.img", file_name[30] = "teste.txt", file_name2[30] = "teste2.txt";
 
   FILE *file;
   
-  int amount_of_sectors = 20;
+  int amount_of_sectors = 20, deu_certo;
 
   //cout << "Nome do Sistema de Arquivos: ";
   //scanf("%s", file_system_name);
 
-  //cout << "Nome do Arquio a ser inserido: ";
+  //cout << "Nome do Arquivo a ser inserido: ";
   //scanf("%s", file_name);
 
   File_system file_system (file_system_name, amount_of_sectors);
 
-  file_system.copy_disk_to_system(file_name);
+  deu_certo = file_system.copy_disk_to_system(file_name);
+
+  if (!deu_certo){
+    cout << "Não foi possível inserir\n";
+  }
 
   return 0;
 }
