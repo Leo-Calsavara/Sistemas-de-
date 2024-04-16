@@ -179,18 +179,23 @@ class File_system {
       }
 
       char teste[32];
-      int how_many
+      int how_many;
+      fseek(insert_file, 0, SEEK_SET);
+      fseek(system_file, free_bitmap_position, SEEK_SET);
 
-      //for(int i = 0; i < ) {
-        fseek(insert_file, 0, SEEK_SET);
-        fread(&teste, sizeof(teste), 1, insert_file);
-        cout << teste << "\n";
+      for(int i = 0; i < (file_size/32); i++) {
 
-        fseek(system_file, free_bitmap_position, SEEK_SET);
+        if(i == file_size/32 - 1) {
+          fread(&teste, (i%(file_size)/32), 1, insert_file);
+        }
+        else {
+          fread(&teste, sizeof(teste), 1, insert_file);
+        }
+
         how_many = fwrite(teste, sizeof(teste), 1, system_file);
 
         cout << "How many: " << how_many << "\n";
-      //}
+      }
     
       fclose(system_file);
       fclose(insert_file);
