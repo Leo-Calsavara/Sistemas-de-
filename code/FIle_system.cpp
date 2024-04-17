@@ -167,7 +167,7 @@ class File_system {
           if (contiguos_free_sectors == sectors_needed_to_data) { // Caso ja tenha o espaco necessario 
             has_space_in_bitmap = 1;
             position_newfile_bitmap = (i*8) + (j+1) - sectors_needed_to_data; // ARMAZENA QUAL POSICAO DO BITMAP VAI SER UTILIZADA PARA ALOCAR OS DADOS
-            free_sector_data_position = ((i + (j+1) - sectors_needed_to_data) * 512) + this->get_data_position(); // posicao absoluta de onde os dados devem começar ser escritos
+            free_sector_data_position = (((i*8) + (j+1) - sectors_needed_to_data) * 512) + this->get_data_position(); // posicao absoluta de onde os dados devem começar ser escritos
             break; // Sai da verificacao 
           }
         }
