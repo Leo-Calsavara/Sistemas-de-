@@ -5,18 +5,6 @@
 
 using namespace std;
 
-struct bit_variable
-{
-    unsigned char b1 : 1;
-    unsigned char b2 : 1;
-    unsigned char b3 : 1;
-    unsigned char b4 : 1;
-    unsigned char b5 : 1;
-    unsigned char b6 : 1;
-    unsigned char b7 : 1;
-    unsigned char b8 : 1;
-};
-
 struct root_directoty_entrie {
   char name[13];
   char extension[3];
@@ -114,7 +102,6 @@ class File_system {
     int copy_disk_to_system(char insert_file_name[30]) {
       FILE *insert_file, *system_file;
       root_directoty_entrie aux_entrie;
-      bit_variable reader_bits;
 
       insert_file = fopen(insert_file_name, "r");
 
@@ -124,6 +111,7 @@ class File_system {
       system_file = fopen(this->file_system_name, "r+"); 
 
       int sectors_needed_to_data = ceil(float(file_size) / float(bytes_per_sector));
+      cout << sectors_needed_to_data << " Sectors needed\n";
 
       fseek(system_file, 512, SEEK_SET); // vai para o root dir
       int has_space_in_rd = 0, rd_new_file_position;
@@ -200,27 +188,29 @@ class File_system {
         fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET); // vai na posicao do BYTE onde o bitmap deve ser marcado
         fread(&reader, sizeof(reader), 1, system_file);
         fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET);
+        // cout << "i: " << i << "\n"; 
+        // cout << "S: " << sectors_needed_to_data/8 << "\n\n";
 
         if(i > 0){
           first_time = 0;
         }
 
-        if((!((i+1) == sectors_needed_to_data) / 8 && !first_time)){ // se nao estiver nos ultimos setores e nao for a primeira vez 
+        if((!((i) == sectors_needed_to_data / 8) && !first_time)){ // se nao estiver nos ultimos setores e nao for a primeira vez 
           for(int bit = 0; bit < 8; bit++){ // seta apenas todos os bits
               reader ^= (1 << bit); 
           }
         }
-        else if((!((i+1) == sectors_needed_to_data) / 8 && first_time)){ // se nao estiver nos ultimos setores e for a primeira vez 
+        else if((!((i) == sectors_needed_to_data / 8) && first_time)){ // se nao estiver nos ultimos setores e for a primeira vez 
           for(int bit = position_newfile_bitmap % 8; bit < 8; bit++){ // seta os bits partindo de uma posicao possivelmente no meio do byte 
               reader ^= (1 << bit);
           }
         }
-        else if((((i+1) == sectors_needed_to_data) / 8 && !first_time)){ // se estiver nos ultimos setores e nao for a primeira vez 
+        else if(((i) == sectors_needed_to_data / 8 && !first_time)){ // se estiver nos ultimos setores e nao for a primeira vez 
           for(int bit = 0; bit < sectors_needed_to_data % 8; bit++){ // seta os bits do comeco do byte ate possivelmente no meio
               reader ^= (1 << bit); // o bit da posicao (position_newfile_bitmap % 8 + bit) é setado para 1
           }
         }
-        else if ((i+1) == sectors_needed_to_data / 8 && first_time){ // se estiver nos ultimos setores e for a primeira vez 
+        else if ((i) == sectors_needed_to_data / 8 && first_time){ // se estiver nos ultimos setores e for a primeira vez 
             for(int bit = position_newfile_bitmap % 8; bit < sectors_needed_to_data % 8; bit++){ // seta partindo possivelmente do meio ate possivelmente no meio
               reader ^= (1 << bit); 
           }
