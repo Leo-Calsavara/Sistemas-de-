@@ -220,13 +220,28 @@ class File_system {
 
       fseek(system_file, 512 + (rd_new_file_position*32), SEEK_SET); // insere o nome no root dir 
       fwrite(insert_file_name, strlen(insert_file_name)-4, 1, system_file); // strlen -4 para retirar o ".txt"
+
+      fwrite(insert_file_name, strlen(insert_file_name)-4, 1, system_file);
+
     
       fclose(system_file);
       fclose(insert_file);
 
       return 1;
     }
+
+    // int remove_file(char insert_file_name[30]) {
+    //   FILE *system_file;
+    //   root_directoty_entrie aux_entrie;
+
+    //   system_file = fopen(this->file_system_name, "r+");
+
+
+
+    // }
 };
+
+
 
 int main()
 {
