@@ -6,12 +6,12 @@
 using namespace std;
 
 struct root_directoty_entrie {
-  char name[13];
+  char name[15];
   char extension[3];
   unsigned int size_in_bytes;
   unsigned short type;
   unsigned int first_sector;
-  char amount_of_sectors[6];
+  unsigned int amount_sectors;
 };
 
 char get_bit(char reader, int index) {
@@ -106,7 +106,7 @@ class File_system {
       insert_file = fopen(insert_file_name, "r");
 
       fseek(insert_file, 0, SEEK_END); // vai para o fim do arquivo
-      int file_size = ftell(insert_file); // retorna onde o ponteiro esta (fim do arquivo), ou seja o tamanho do arquivo que queremos inserir
+      unsigned int file_size = ftell(insert_file); // retorna onde o ponteiro esta (fim do arquivo), ou seja o tamanho do arquivo que queremos inserir
 
       system_file = fopen(this->file_system_name, "r+"); 
 
@@ -221,11 +221,38 @@ class File_system {
       fseek(system_file, 512 + (rd_new_file_position*32), SEEK_SET); // insere o nome no root dir 
       fwrite(insert_file_name, strlen(insert_file_name)-4, 1, system_file); // strlen -4 para retirar o ".txt"
 
-      fwrite(insert_file_name, strlen(insert_file_name)-4, 1, system_file);
+      char copy_string[4];
+  
+      for(int i = 0; i <= strlen(insert_file_name); i++) {
+        if(i == strlen(insert_file_name)-3) {
+          for(int j = 0; j < 3; j++) {
+            copy_string[j] = insert_file_name[i+j];
+          }
+        }
+      }
+      copy_string[3] = '\0';
 
-    
-      fclose(system_file);
-      fclose(insert_file);
+      fseek(system_file, 512 + (rd_new_file_position*32) + 15, SEEK_SET);
+      fwrite(copy_string, strlen(copy_string), 1, system_file);
+
+      fseek(system_file, 512 + (rd_new_file_position*32) + 18, SEEK_SET);
+
+      // cout << "File size: " << file_size << "  size: " << sizeof(file_size) << "\n";
+
+      fwrite(&file_size, sizeof(file_size), 1, system_file);
+
+      unsigned short insert_file_type = 0x10;
+
+      fseek(system_file, 512 + (rd_new_file_position*32) + 22, SEEK_SET);
+      fwrite(&insert_file_type, sizeof(insert_file_type), 1, system_file);
+
+      fseek(system_file, 512 + (rd_new_file_position*32) + 24, SEEK_SET);
+      fwrite(&position_newfile_bitmap, sizeof(position_newfile_bitmap), 1, system_file);
+
+      fseek(system_file, 512 + (rd_new_file_position*32) + 28, SEEK_SET);
+      fwrite(&sectors_needed_to_data, sizeof(sectors_needed_to_data), 1, system_file);
+
+      // cout << "Name: " << insert_file_name << "\nExtension: " << copy_string << "\nFile size: " << file_size << "\nInsert file type: " << insert_file_type << "\nPosition bitmap: " << position_newfile_bitmap << "\nSectors needed to data: " << sectors_needed_to_data << "\n";
 
       return 1;
     }
