@@ -184,35 +184,33 @@ class File_system {
       }
       int first_time = 1;
 
-      for(int i = 0; i <= (sectors_needed_to_data / 8); i++) {
+      for(int i = 0; i <= ((sectors_needed_to_data+position_newfile_bitmap) / 8); i++) {
         fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET); // vai na posicao do BYTE onde o bitmap deve ser marcado
         fread(&reader, sizeof(reader), 1, system_file);
         fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET);
-        // cout << "i: " << i << "\n"; 
-        // cout << "S: " << sectors_needed_to_data/8 << "\n\n";
 
         if(i > 0){
           first_time = 0;
         }
 
-        if((!((i) == sectors_needed_to_data / 8) && !first_time)){ // se nao estiver nos ultimos setores e nao for a primeira vez 
+        if((!((i) == (sectors_needed_to_data+position_newfile_bitmap) / 8) && !first_time)){ // se nao estiver nos ultimos setores e nao for a primeira vez 
           for(int bit = 0; bit < 8; bit++){ // seta apenas todos os bits
               reader ^= (1 << bit); 
           }
         }
-        else if((!((i) == sectors_needed_to_data / 8) && first_time)){ // se nao estiver nos ultimos setores e for a primeira vez 
+        else if((!((i) == (sectors_needed_to_data+position_newfile_bitmap) / 8) && first_time)){ // se nao estiver nos ultimos setores e for a primeira vez 
           for(int bit = position_newfile_bitmap % 8; bit < 8; bit++){ // seta os bits partindo de uma posicao possivelmente no meio do byte 
               reader ^= (1 << bit);
           }
         }
-        else if(((i) == sectors_needed_to_data / 8 && !first_time)){ // se estiver nos ultimos setores e nao for a primeira vez 
-          for(int bit = 0; bit < sectors_needed_to_data % 8; bit++){ // seta os bits do comeco do byte ate possivelmente no meio
+        else if(((i) == (sectors_needed_to_data+position_newfile_bitmap) / 8 && !first_time)){ // se estiver nos ultimos setores e nao for a primeira vez 
+          for(int bit = 0; bit < (sectors_needed_to_data+position_newfile_bitmap) % 8; bit++){ // seta os bits do comeco do byte ate possivelmente no meio
               reader ^= (1 << bit); // o bit da posicao (position_newfile_bitmap % 8 + bit) é setado para 1
           }
         }
-        else if ((i) == sectors_needed_to_data / 8 && first_time){ // se estiver nos ultimos setores e for a primeira vez 
-            for(int bit = position_newfile_bitmap % 8; bit < sectors_needed_to_data % 8; bit++){ // seta partindo possivelmente do meio ate possivelmente no meio
-              reader ^= (1 << bit); 
+        else if ((i) == (sectors_needed_to_data+position_newfile_bitmap) / 8 && first_time){ // se estiver nos ultimos setores e for a primeira vez 
+            for(int bit = position_newfile_bitmap % 8; bit < (sectors_needed_to_data+position_newfile_bitmap) % 8; bit++){ // seta partindo possivelmente do meio ate possivelmente no meio
+              reader ^= (1 << bit);
           }
         }
         fwrite(&reader, sizeof(reader), 1, system_file); // reescreve o byte com a alteração do bit
@@ -247,6 +245,7 @@ class File_system {
       fwrite(&insert_file_type, sizeof(insert_file_type), 1, system_file);
 
       fseek(system_file, 512 + (rd_new_file_position*32) + 24, SEEK_SET);
+      cout << "Position new file bitmap: " << position_newfile_bitmap << "\n";
       fwrite(&position_newfile_bitmap, sizeof(position_newfile_bitmap), 1, system_file);
 
       fseek(system_file, 512 + (rd_new_file_position*32) + 28, SEEK_SET);
@@ -254,18 +253,101 @@ class File_system {
 
       // cout << "Name: " << insert_file_name << "\nExtension: " << copy_string << "\nFile size: " << file_size << "\nInsert file type: " << insert_file_type << "\nPosition bitmap: " << position_newfile_bitmap << "\nSectors needed to data: " << sectors_needed_to_data << "\n";
 
+      fclose(system_file);
+      fclose(insert_file);
+
       return 1;
     }
 
-    // int remove_file(char insert_file_name[30]) {
-    //   FILE *system_file;
-    //   root_directoty_entrie aux_entrie;
+    int remove_file(char remove_file_name[30]) {
+      FILE *system_file;
+      root_directoty_entrie aux_entrie;
 
-    //   system_file = fopen(this->file_system_name, "r+");
+      char name_without_extension[30];
 
+      for(int i = 0; i < strlen(remove_file_name)-4; i++) {
+        name_without_extension[i] = remove_file_name[i];
+        name_without_extension[i+1] = '\0';
+      }
 
+      system_file = fopen(this->file_system_name, "r+");
+      fseek(system_file, this->bytes_per_sector, SEEK_SET);
 
-    // }
+      for(int i = 0; i < 192; i++) { // acha o arquivo no root directory
+        fread(&aux_entrie.name, sizeof(aux_entrie.name), 1, system_file);
+        fread(&aux_entrie.extension, sizeof(aux_entrie.extension), 1, system_file);
+        fread(&aux_entrie.size_in_bytes, sizeof(aux_entrie.size_in_bytes), 1, system_file);
+        fread(&aux_entrie.type, sizeof(aux_entrie.type), 1, system_file);
+        fread(&aux_entrie.first_sector, sizeof(aux_entrie.first_sector), 1, system_file);
+
+        fseek(system_file, this->bytes_per_sector+i*32+28, SEEK_SET);
+        fread(&aux_entrie.amount_sectors, 4, 1, system_file);
+
+        // cout << "Amount sectors: " << aux_entrie.amount_sectors << "\n";
+        // cout << "Posicao " << this->bytes_per_sector+i*32+28 << "\n\n";
+
+        if (!strcmp(name_without_extension, aux_entrie.name)) {
+          //cout << "Arquivo encontrado " << aux_entrie.name << "  FS: " << aux_entrie.first_sector << "  Amount sectors: " << aux_entrie.amount_sectors << "\n";
+      
+          cout << "\nName: " << aux_entrie.name << "\nExtension: " << aux_entrie.extension << "\nFile size: " << aux_entrie.size_in_bytes << "\nInsert file type: " << aux_entrie.type << "\nPosition bitmap: " << aux_entrie.first_sector << "\nSectors needed to data: " << aux_entrie.amount_sectors << "\n";
+
+          fseek(system_file, this->bytes_per_sector + i*32, SEEK_SET);
+          char aux = 0xE5;
+          fwrite(&aux, 1, 1, system_file);
+          break;
+        }
+      }
+
+      char reader;
+
+      int first_time = 1;
+
+      for(int i = 0; i <= (aux_entrie.amount_sectors / 8); i++) {
+        fseek(system_file, this->get_bitmap_position() + (aux_entrie.first_sector/512) + i, SEEK_SET); // vai na posicao do BYTE onde o bitmap deve ser marcado
+        fread(&reader, sizeof(reader), 1, system_file);
+
+        // printf("Reader %d Amount of sectors %d\n", reader, aux_entrie.amount_sectors);
+
+        cout << "Entrou?\n";
+
+        if(i > 0){
+          first_time = 0;
+        }
+
+        if((!((i) == (aux_entrie.amount_sectors+aux_entrie.first_sector) / 8) && !first_time)){ // se nao estiver nos ultimos setores e nao for a primeira vez
+          cout << "1111\n";
+          for(int bit = 0; bit < 8; bit++){ // seta todos os bits
+              reader ^= (1 << bit);
+          }
+        }
+        else if((!((i) == (aux_entrie.amount_sectors+aux_entrie.first_sector) / 8) && first_time)){ // se nao estiver nos ultimos setores e for a primeira vez
+          cout << "2222\n";
+          for(int bit = aux_entrie.first_sector % 8; bit < 8; bit++){ // seta os bits partindo de uma posicao possivelmente no meio do byte 
+              reader ^= (1 << bit);
+          }
+        }
+        else if(((i) == (aux_entrie.amount_sectors+aux_entrie.first_sector) / 8 && !first_time)){ // se estiver nos ultimos setores e nao for a primeira vez 
+          cout << "3333\n"; 
+          for(int bit = 0; bit < (aux_entrie.amount_sectors+aux_entrie.first_sector) % 8; bit++){ // seta os bits do comeco do byte ate possivelmente no meio
+              reader ^= (1 << bit); // o bit da posicao (aux_entrie.first_sector % 8 + bit) é alterado
+          }
+        }
+        else if ((i) == (aux_entrie.amount_sectors+aux_entrie.first_sector) / 8 && first_time){ // se estiver nos ultimos setores e for a primeira vez 
+           
+            for(int bit = aux_entrie.first_sector % 8; bit < (aux_entrie.amount_sectors+aux_entrie.first_sector) % 8; bit++){ // seta partindo possivelmente do meio ate possivelmente no meio
+              reader ^= (1 << bit);  
+          }
+        }
+        fseek(system_file, this->get_bitmap_position() + (aux_entrie.first_sector/512) + i, SEEK_SET);
+        // printf("Reader: %d\n", reader);
+
+        fwrite(&reader, sizeof(reader), 1, system_file); // reescreve o byte com a alteração do bit
+      }
+
+      fclose(system_file);
+
+      return 1;
+    }
 };
 
 
@@ -287,6 +369,10 @@ int main()
   File_system file_system (file_system_name, amount_of_sectors);
 
   deu_certo = file_system.copy_disk_to_system(file_name2);
+  deu_certo = file_system.copy_disk_to_system(file_name);
+  deu_certo = file_system.copy_disk_to_system(file_name);
+
+  // file_system.remove_file(file_name2);
 
   if (!deu_certo){
     cout << "Nao foi possivel inserir\n";

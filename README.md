@@ -20,12 +20,12 @@
 
 | Deslocamento | Comprimento | Significado |
 | --- | --- | --- |
-| 0 | 13 | Nome |
-| 13 | 3 | Extensão |
-| 16 | 4 | Tamanho |
-| 20 | 2 | Tipo de acesso |
-| 22 | 4 | Primeiro setor |
-| 26 | 6 | Número de setores |
+| 0 | 15 | Nome |
+| 15 | 3 | Extensão |
+| 18 | 4 | Tamanho |
+| 22 | 2 | Tipo de acesso |
+| 24 | 4 | Primeiro setor |
+| 28 | 4 | Número de setores |
 
 ## Funcionalidades:
 ### Formatador:
