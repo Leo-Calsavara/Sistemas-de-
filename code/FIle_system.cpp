@@ -88,15 +88,23 @@ class File_system {
     }
 
   public:
-    File_system(char *file_system_name, int total_sector_amount) { // Constrututor para um novo sistema de arquivos (2 parametros)
+    void file_system_not_created(char *file_system_name, int total_sector_amount) { // Constrututor para um novo sistema de arquivos (2 parametros)
       this->initialize_variables(file_system_name, total_sector_amount);
       this->create_img();
       this->generate_boot_record();
     }
 
-     File_system(char *file_system_name) { // Construtor para um sistema ja existente (1 parametro)
+    void file_system_already_created(char *file_system_name) { // Construtor para um sistema ja existente (1 parametro)
       int total_sectors_amount = this->get_total_sectors_amount(file_system_name);
       this->initialize_variables(file_system_name, total_sectors_amount);
+    }
+
+    File_system(){
+      
+    }
+
+    int copy_system_to_disk(char insert_file_name[30]) {
+
     }
 
     int copy_disk_to_system(char insert_file_name[30]) {
@@ -332,29 +340,51 @@ class File_system {
 
 int main()
 {
-  char file_system_name[30] = "teste.img", file_name[30] = "teste.txt", file_name2[30] = "teste2.txt";
-
+  char file_system_name[30], file_name[30] = "teste.txt", file_name2[30] = "teste2.txt";
   FILE *file;
+  File_system file_system;
+  int amount_of_sectors = 30, deu_certo, choice = 0;
+
+  cout << "Criar novo Sistema (0)\nUtilizar um ja existente(1)\n";
+  cin >> choice;
   
-  int amount_of_sectors = 30, deu_certo;
-
-  //cout << "Nome do Sistema de Arquivos: ";
-  //scanf("%s", file_system_name);
-
-  //cout << "Nome do Arquivo a ser inserido: ";
-  //scanf("%s", file_name);
-
-  File_system file_system (file_system_name, amount_of_sectors);
-
-  deu_certo = file_system.copy_disk_to_system(file_name2);
-  deu_certo = file_system.copy_disk_to_system(file_name);
-  deu_certo = file_system.copy_disk_to_system(file_name);
-
-  file_system.remove_file(file_name2);
-
-  if (!deu_certo){
-    cout << "Nao foi possivel inserir\n";
+  if(choice == 1) {
+    cout << "Nome do Sistema existente: ";
+    scanf("%s", file_system_name);
+    file_system.file_system_already_created(file_system_name);
   }
+  else {
+    cout << "Nome do novo Sistema: ";
+    scanf("%s", file_system_name);
+    cout << "Quantida de setores: ";
+    scanf("%d", &amount_of_sectors);
+    file_system.file_system_not_created(file_system_name, amount_of_sectors);
+  }
+  cout <<"\n";
 
+  while(true) {
+    cout << "Copy disk to system (0)\nRemove file(1)\nExit(2)\n";
+    cin >> choice;
+
+    if(choice == 1) {
+      cout << "Nome do arquivo a ser removido: ";
+      scanf("%s", file_name);
+      file_system.remove_file(file_name);
+    }
+
+    else if (choice == 0) {
+      cout << "Nome do arquivo a ser inserido: ";
+      scanf("%s", file_name);
+      deu_certo = file_system.copy_disk_to_system(file_name);
+
+      if (!deu_certo){
+        cout << "Nao foi possivel inserir\n";
+      }
+      cout << "\n";
+    }
+    else {
+      return 0;
+    }
+  }
   return 0;
 }
