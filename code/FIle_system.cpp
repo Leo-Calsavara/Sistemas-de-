@@ -99,12 +99,79 @@ class File_system {
       this->initialize_variables(file_system_name, total_sectors_amount);
     }
 
+    root_directoty_entrie get_rd_entrie(char file_name_entrie[30]) {
+      FILE *system_file;
+      root_directoty_entrie aux_entrie;
+
+      char name_without_extension[30];
+
+      for(int i = 0; i < strlen(file_name_entrie)-4; i++) {
+        name_without_extension[i] = file_name_entrie[i];
+        name_without_extension[i+1] = '\0';
+      }
+
+      system_file = fopen(this->file_system_name, "r");
+      fseek(system_file, this->bytes_per_sector, SEEK_SET);
+
+      for(int i = 0; i < 192; i++) { // acha o arquivo no root directory
+        fread(&aux_entrie.name, sizeof(aux_entrie.name), 1, system_file);
+        fread(&aux_entrie.extension, sizeof(aux_entrie.extension), 1, system_file);
+        fread(&aux_entrie.size_in_bytes, sizeof(aux_entrie.size_in_bytes), 1, system_file);
+        fread(&aux_entrie.type, sizeof(aux_entrie.type), 1, system_file);
+        fread(&aux_entrie.first_sector, sizeof(aux_entrie.first_sector), 1, system_file);
+
+        fseek(system_file, this->bytes_per_sector+i*32+28, SEEK_SET);
+        fread(&aux_entrie.amount_sectors, 4, 1, system_file);
+
+        if (!strcmp(name_without_extension, aux_entrie.name)) {
+          return aux_entrie;
+        }
+      }
+
+      cout << "Arquivo nao encontrado\n";
+      return aux_entrie;
+      fclose(system_file);
+    }
+
     File_system(){
       
     }
 
-    int copy_system_to_disk(char insert_file_name[30]) {
+    int copy_system_to_disk(char file_name_on_system[30]) {
+      ifstream system_file;
+      ofstream new_file_in_disk(file_name_on_system);
+      root_directoty_entrie aux_entrie;
 
+      system_file.open(this->file_system_name, ios::in);
+
+      aux_entrie = this->get_rd_entrie(file_name_on_system);
+
+      system_file.seekg(this->get_data_position() + aux_entrie.first_sector * this->bytes_per_sector, ios::beg);
+      
+      int resto = 512;
+
+      for(int i = 0; i < ceil(float(aux_entrie.size_in_bytes) / 512); i++) {
+        char reader_arq[512];
+        if(i+1 == ceil(float(aux_entrie.size_in_bytes))) {
+          resto = aux_entrie.size_in_bytes % 512;
+
+          cout << "Resto: " << resto << "\n";
+          system_file.read(reader_arq, resto);
+          cout << reader_arq;
+          reader_arq[resto+1] = '\0';
+
+          new_file_in_disk << reader_arq;
+        }
+
+        else {
+          system_file.read(reader_arq, resto); 
+          new_file_in_disk << reader_arq; // por algum motivo ele não escreve apenas 512
+        }
+      }
+      new_file_in_disk.close();
+      system_file.close();
+
+      return 0;
     }
 
     int copy_disk_to_system(char insert_file_name[30]) {
@@ -114,12 +181,25 @@ class File_system {
       insert_file = fopen(insert_file_name, "r");
 
       fseek(insert_file, 0, SEEK_END); // vai para o fim do arquivo
-      unsigned int file_size = ftell(insert_file); // retorna onde o ponteiro esta (fim do arquivo), ou seja o tamanho do arquivo que queremos inserir
+      int file_size = ftell(insert_file); // retorna onde o ponteiro esta (fim do arquivo), ou seja o tamanho do arquivo que queremos inserir
+
+      // char find_end;
+      // int i = 0;
+      // while(find_end != EOF) {
+      //   fseek(insert_file, i, SEEK_SET);
+      //   find_end = fgetc(insert_file);
+      //   i++;
+
+      //   if (find_end == EOF) {
+      //     cout <<"GG KRL"<<endl;
+      //   }
+      // }
+      // cout << "FIM DO ARQ: " << ftell(insert_file) << endl;
 
       system_file = fopen(this->file_system_name, "r+"); 
 
       int sectors_needed_to_data = ceil(float(file_size) / float(bytes_per_sector));
-      cout << sectors_needed_to_data << " Sectors needed\n";
+      cout << sectors_needed_to_data << " Sectors needed   File size: " << file_size << "\n";
 
       fseek(system_file, 512, SEEK_SET); // vai para o root dir
       int has_space_in_rd = 0, rd_new_file_position;
@@ -175,19 +255,22 @@ class File_system {
         return 0; // se nao houver espaco para os dados return
       }
 
-      char teste[32];
       fseek(insert_file, 0, SEEK_SET); // posicao 0 do arquivo a ser inserido
-      fseek(system_file, free_sector_data_position, SEEK_SET); // posicao absoluta de onde os dados começam 
+      fseek(system_file, free_sector_data_position, SEEK_SET); // posicao absoluta de onde os dados começam
 
-      for(int i = 0; i <= (file_size/32); i++) { // para cada 32 bytes de dados a ser inseridos
+      for(int i = 0; i < ceil(float(file_size)/32); i++) { // para cada 32 bytes de dados a ser inseridos
 
-        if(i == file_size/32) { // se estiver no fim do dado a ser inserido e ele não ocupar exatamente 32 bytes
-          fread(&teste, file_size%32 , 1, insert_file); // le e escreve apenas os bytes restantes
+        char teste[32];
+        for(int zera = 0; zera < 32; zera++){teste[zera] = 0;}
+        if(i+1 == ceil(float(file_size)/32)) { // se estiver no fim do dado a ser inserido e ele não ocupar exatamente 32 bytes
+          fseek(insert_file, i*32, SEEK_SET);
+          fread(&teste, file_size%32, 1, insert_file); // le e escreve apenas os bytes restantes
           fwrite(teste, file_size%32, 1, system_file);
+          break;
         }
         else {
-          fread(&teste, sizeof(teste), 1, insert_file);
-          fwrite(teste, sizeof(teste), 1, system_file);
+          fread(&teste, 32, 1, insert_file);
+          fwrite(teste, 32, 1, system_file);
         }
       }
       int first_time = 1;
@@ -363,17 +446,11 @@ int main()
   cout <<"\n";
 
   while(true) {
-    cout << "Copy disk to system (0)\nRemove file(1)\nExit(2)\n";
+    cout << "Copy disk to system (0)\nCopy system to disk(1)\nRemove file(2)\nListagem de arquivos(3)\nExit(4)\n";
     cin >> choice;
 
-    if(choice == 1) {
-      cout << "Nome do arquivo a ser removido: ";
-      scanf("%s", file_name);
-      file_system.remove_file(file_name);
-    }
-
-    else if (choice == 0) {
-      cout << "Nome do arquivo a ser inserido: ";
+    if (choice == 0) {
+      cout << "\nNome do arquivo a ser inserido: ";
       scanf("%s", file_name);
       deu_certo = file_system.copy_disk_to_system(file_name);
 
@@ -381,6 +458,24 @@ int main()
         cout << "Nao foi possivel inserir\n";
       }
       cout << "\n";
+    }
+    else if (choice == 1) {
+      cout << "\nNome do arquivo a ser copiado para disco: ";
+      scanf("%s", file_name);
+      deu_certo = file_system.copy_system_to_disk(file_name);
+
+      // if (!deu_certo){
+      //   cout << "Nao foi possivel inserir\n";
+      // }
+      // cout << "\n";
+    }
+    else if(choice == 2) {
+      cout << "\nNome do arquivo a ser removido: ";
+      scanf("%s", file_name);
+      file_system.remove_file(file_name);
+    }
+    else if (choice == 3) {
+      
     }
     else {
       return 0;
