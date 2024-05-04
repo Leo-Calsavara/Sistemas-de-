@@ -174,6 +174,29 @@ class File_system {
       return 0;
     }
 
+
+    void list_files() {
+    FILE *system_file;
+    root_directoty_entrie aux_entrie;
+
+    system_file = fopen(file_system_name, "r");
+
+    fseek(system_file, 512, SEEK_SET); // vai para o root dir
+
+    cout << "Listagem de Arquivos:\n";
+
+    for(int i = 0; i < 192; i++) { // percorre todas as entradas do root dir
+        fread(&aux_entrie, 32, 1, system_file);
+       if (aux_entrie.name[0] != 0 && aux_entrie.name[0] != 0xE5) {
+            cout << "Nome: " << aux_entrie.name << "." << aux_entrie.extension << "\n";
+            cout << "Tamanho: " << aux_entrie.size_in_bytes << " bytes\n";
+            cout << "Tipo: " << aux_entrie.type << "\n\n";
+        }
+    }
+
+    fclose(system_file);
+}
+
     int copy_disk_to_system(char insert_file_name[30]) {
       FILE *insert_file, *system_file;
       root_directoty_entrie aux_entrie;
@@ -475,7 +498,7 @@ int main()
       file_system.remove_file(file_name);
     }
     else if (choice == 3) {
-      
+        file_system.list_files();
     }
     else {
       return 0;
