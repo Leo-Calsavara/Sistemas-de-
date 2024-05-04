@@ -134,13 +134,15 @@ class File_system {
     }
 
     int copy_system_to_disk(char file_name_on_system[30]) {
-      ifstream system_file;
-      ofstream new_file_in_disk(file_name_on_system);
+      FILE *system_file, *new_file_in_disk;
       root_directoty_entrie aux_entrie;
 
-      system_file.open(this->file_system_name, ios::in);
+      system_file = fopen(this->file_system_name, "rb");
+      new_file_in_disk = fopen(file_name_on_system, "w+b");
+
       aux_entrie = this->get_rd_entrie(file_name_on_system);
-      system_file.seekg(this->get_data_position() + aux_entrie.first_sector * this->bytes_per_sector, ios::beg);
+
+      fseek(system_file, this->get_data_position() + aux_entrie.first_sector * this->bytes_per_sector, SEEK_SET);
       
       int resto = 512;
       char reader_arq[512];
@@ -150,20 +152,20 @@ class File_system {
         
         if(i+1 == ceil(float(aux_entrie.size_in_bytes))) {
           resto = aux_entrie.size_in_bytes % 512;
-          system_file.read(reader_arq, resto);
+          fread(reader_arq, resto, 1, system_file);
           cout << reader_arq;
           reader_arq[resto+1] = '\0';
 
-          new_file_in_disk << reader_arq;
+          fwrite(reader_arq, resto, 1, new_file_in_disk);
         }
 
         else {
-          system_file.read(reader_arq, resto); 
-          new_file_in_disk << reader_arq; 
+          fread(reader_arq, resto, 1, system_file);
+          fwrite(reader_arq, resto, 1, new_file_in_disk);
         }
       }
-      new_file_in_disk.close();
-      system_file.close();
+      fclose(new_file_in_disk);
+      fclose(system_file);
 
       return 0;
     }
@@ -187,7 +189,6 @@ class File_system {
             cout << "Tipo: " << aux_entrie.type << "\n\n";
         }
     }
-
     fclose(system_file);
 }
 
@@ -195,25 +196,12 @@ class File_system {
       FILE *insert_file, *system_file;
       root_directoty_entrie aux_entrie;
 
-      insert_file = fopen(insert_file_name, "r");
+      insert_file = fopen(insert_file_name, "rb");
 
       fseek(insert_file, 0, SEEK_END); // vai para o fim do arquivo
       int file_size = ftell(insert_file); // retorna onde o ponteiro esta (fim do arquivo), ou seja o tamanho do arquivo que queremos inserir
 
-      // char find_end;
-      // int i = 0;
-      // while(find_end != EOF) {
-      //   fseek(insert_file, i, SEEK_SET);
-      //   find_end = fgetc(insert_file);
-      //   i++;
-
-      //   if (find_end == EOF) {
-      //     cout <<"GG KRL"<<endl;
-      //   }
-      // }
-      // cout << "FIM DO ARQ: " << ftell(insert_file) << endl;
-
-      system_file = fopen(this->file_system_name, "r+"); 
+      system_file = fopen(this->file_system_name, "r+b"); 
 
       int sectors_needed_to_data = ceil(float(file_size) / float(bytes_per_sector));
       cout << sectors_needed_to_data << " Sectors needed   File size: " << file_size << "\n";
@@ -275,10 +263,12 @@ class File_system {
       fseek(insert_file, 0, SEEK_SET); // posicao 0 do arquivo a ser inserido
       fseek(system_file, free_sector_data_position, SEEK_SET); // posicao absoluta de onde os dados começam
 
-      for(int i = 0; i < ceil(float(file_size)/32); i++) { // para cada 32 bytes de dados a ser inseridos
+      char teste[32];
+      teste[32] = '\0';
 
-        char teste[32];
-        for(int zera = 0; zera < 32; zera++){teste[zera] = 0;}
+      for(int i = 0; i < ceil(float(file_size)/32); i++) { // para cada 32 bytes de dados a ser inseridos
+        //for(int zera = 0; zera < 32; zera++){teste[zera] = 0;}
+
         if(i+1 == ceil(float(file_size)/32)) { // se estiver no fim do dado a ser inserido e ele não ocupar exatamente 32 bytes
           fseek(insert_file, i*32, SEEK_SET);
           fread(&teste, file_size%32, 1, insert_file); // le e escreve apenas os bytes restantes
@@ -295,7 +285,7 @@ class File_system {
       for(int i = 0; i <= ((sectors_needed_to_data+position_newfile_bitmap) / 8); i++) {
         fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET); // vai na posicao do BYTE onde o bitmap deve ser marcado
         fread(&reader, sizeof(reader), 1, system_file);
-        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET);
+        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET); // 512 é o problema
 
         if(i > 0){
           first_time = 0;
