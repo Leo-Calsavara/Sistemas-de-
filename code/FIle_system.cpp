@@ -133,29 +133,23 @@ class File_system {
       fclose(system_file);
     }
 
-    File_system(){
-      
-    }
-
     int copy_system_to_disk(char file_name_on_system[30]) {
       ifstream system_file;
       ofstream new_file_in_disk(file_name_on_system);
       root_directoty_entrie aux_entrie;
 
       system_file.open(this->file_system_name, ios::in);
-
       aux_entrie = this->get_rd_entrie(file_name_on_system);
-
       system_file.seekg(this->get_data_position() + aux_entrie.first_sector * this->bytes_per_sector, ios::beg);
       
       int resto = 512;
+      char reader_arq[512];
+      reader_arq[512] = '\0';
 
       for(int i = 0; i < ceil(float(aux_entrie.size_in_bytes) / 512); i++) {
-        char reader_arq[512];
+        
         if(i+1 == ceil(float(aux_entrie.size_in_bytes))) {
           resto = aux_entrie.size_in_bytes % 512;
-
-          cout << "Resto: " << resto << "\n";
           system_file.read(reader_arq, resto);
           cout << reader_arq;
           reader_arq[resto+1] = '\0';
@@ -165,7 +159,7 @@ class File_system {
 
         else {
           system_file.read(reader_arq, resto); 
-          new_file_in_disk << reader_arq; // por algum motivo ele não escreve apenas 512
+          new_file_in_disk << reader_arq; 
         }
       }
       new_file_in_disk.close();
