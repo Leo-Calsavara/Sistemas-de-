@@ -282,10 +282,10 @@ class File_system {
       }
       int first_time = 1;
 
-      for(int i = 0; i <= ((sectors_needed_to_data+position_newfile_bitmap) / 8); i++) {
-        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET); // vai na posicao do BYTE onde o bitmap deve ser marcado
+      for(int i = 0; i < ceil(float(sectors_needed_to_data) / 8); i++) {
+        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/8) + i, SEEK_SET); // vai na posicao do BYTE onde o bitmap deve ser marcado
         fread(&reader, sizeof(reader), 1, system_file);
-        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/512) + i, SEEK_SET); // 512 é o problema
+        fseek(system_file, this->get_bitmap_position() + (position_newfile_bitmap/8) + i, SEEK_SET); // 512 é o problema
 
         if(i > 0){
           first_time = 0;
