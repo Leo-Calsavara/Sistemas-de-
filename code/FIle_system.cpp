@@ -2,6 +2,7 @@
 #include <cmath>
 #include <fstream>
 #include <string.h>
+#include <limits>
 
 using namespace std;
 
@@ -16,6 +17,11 @@ struct root_directoty_entrie {
 
 char get_bit(char reader, int index) {
   return 1 & (reader >> index);
+}
+
+void limparBuffer() {
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 class File_system {
@@ -171,26 +177,43 @@ class File_system {
     }
 
 
-    void list_files() {
-    FILE *system_file;
-    root_directoty_entrie aux_entrie;
+    void list_files(){
+      bool is_zero = false;
+        FILE *system_file;
+        root_directoty_entrie aux_entrie;
+        int pos_rootdir = 512;
+        
+        system_file = fopen(file_system_name, "r");
+      
+      fseek(system_file, 512, SEEK_SET);
 
-    system_file = fopen(file_system_name, "r");
+      while(!is_zero){
 
-    fseek(system_file, 512, SEEK_SET); // vai para o root dir
-
-    cout << "Listagem de Arquivos:\n";
-
-    for(int i = 0; i < 192; i++) { // percorre todas as entradas do root dir
         fread(&aux_entrie, 32, 1, system_file);
-       if (aux_entrie.name[0] != 0 && aux_entrie.name[0] != 0xE5) {
-            cout << "Nome: " << aux_entrie.name << "." << aux_entrie.extension << "\n";
-            cout << "Tamanho: " << aux_entrie.size_in_bytes << " bytes\n";
-            cout << "Tipo: " << aux_entrie.type << "\n\n";
+
+        if(aux_entrie.name[0] == 0){
+          is_zero = true;
+        }else if(aux_entrie.name[0] == 229){
+          pos_rootdir += 32;
+          fseek(system_file, pos_rootdir, SEEK_SET);
+        } else{
+          printf("Nome: ");
+          for(int i=0; i<15; i++){
+            printf("%c", aux_entrie.name[i]);
+          }
+          printf(".");
+          for(int i=0; i<3; i++){
+            printf("%c", aux_entrie.extension[i]);
+          }
+          printf("\nTamanho: %d\n", aux_entrie.size_in_bytes);
+          pos_rootdir += 32;
+          fseek(system_file, pos_rootdir, SEEK_SET);
+          printf("\n");
         }
+      }
+      
+      return;
     }
-    fclose(system_file);
-}
 
     int copy_disk_to_system(char insert_file_name[30]) {
       FILE *insert_file, *system_file;
@@ -434,59 +457,165 @@ int main()
   FILE *file;
   File_system file_system;
   int amount_of_sectors = 30, deu_certo, choice = 0;
+  int escolha;
 
-  cout << "Criar novo Sistema (0)\nUtilizar um ja existente(1)\n";
-  cin >> choice;
-  
-  if(choice == 1) {
-    cout << "Nome do Sistema existente: ";
-    scanf("%s", file_system_name);
-    file_system.file_system_already_created(file_system_name);
-  }
-  else {
-    cout << "Nome do novo Sistema: ";
-    scanf("%s", file_system_name);
-    cout << "Quantida de setores: ";
-    scanf("%d", &amount_of_sectors);
-    file_system.file_system_not_created(file_system_name, amount_of_sectors);
-  }
-  cout <<"\n";
+  do {
+      cout << "|---------------------------------------------------|" << endl;
+      cout << "|                  MENU PRINCIPAL                   |" << endl;
+      cout << "|---------------------------------------------------|" << endl;
+      cout << "|                                                   |" << endl;
+      cout << "| 1. Criar novo sistema.                            |" << endl;
+      cout << "| 2. Utilizar um sistema já existente.              |" << endl;
+      cout << "| 0. Sair                                           |" << endl;
+      cout << "|                                                   |" << endl;
+      cout << "|---------------------------------------------------|" << endl;
+      cout << "Selecione uma opção (número correspondente) => ";
+      cin >> escolha;
 
-  while(true) {
-    cout << "Copy disk to system (0)\nCopy system to disk(1)\nRemove file(2)\nListagem de arquivos(3)\nExit(4)\n";
-    cin >> choice;
+      switch (escolha) {
+          case 1:{
+                  cout << "\n|---------------------------------------------------|" << endl;
+                  cout << "| - Nome do novo Sistema => ";
+                  scanf("%s", file_system_name);
+                  cout << "\n|---------------------------------------------------|" << endl;
+                  cout << "\n|---------------------------------------------------|" << endl;
+                  cout << "Quantida de setores: ";
+                  scanf("%d", &amount_of_sectors);
+                  cout << "\n|---------------------------------------------------|" << endl;
+                  file_system.file_system_not_created(file_system_name, amount_of_sectors);
+                  int subEscolha;
+                  do {
+                      cout << "|---------------------------------------------------|" << endl;
+                      cout << "|                 SUBMENU - Opção 1                 |" << endl;
+                      cout << "|---------------------------------------------------|" << endl;
+                      cout << "|                                                   |" << endl;
+                      cout << "| 1. Copiar do disco para o sistema.                |" << endl;
+                      cout << "| 2. Copiar do sistema para o disco.                |" << endl;
+                      cout << "| 3. Remover um arquivo do sistema.                 |" << endl;
+                      cout << "| 4. Listar todos os arquivos do sistema.           |" << endl;
+                      cout << "| 0. Voltar ao menu principal                       |" << endl;
+                      cout << "|                                                   |" << endl;
+                      cout << "|---------------------------------------------------|" << endl;
+                      cout << "Selecione uma opção (número correspondente) => ";
+                      cin >> subEscolha;
 
-    if (choice == 0) {
-      cout << "\nNome do arquivo a ser inserido: ";
-      scanf("%s", file_name);
-      deu_certo = file_system.copy_disk_to_system(file_name);
+                      switch (subEscolha) {
+                          case 1:
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              cout << "\n| - Nome do arquivo a ser inserido => ";
+                              scanf("%s", file_name);
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              deu_certo = file_system.copy_disk_to_system(file_name);
 
-      if (!deu_certo){
-        cout << "Nao foi possivel inserir\n";
+                              if (!deu_certo){
+                                cout << "\n|---------------------------------------------------|" << endl;
+                                cout << "| - Nao foi possivel inserir\n";
+                                cout << "|---------------------------------------------------|" << endl;
+                              }
+                              cout << "\n";
+                              break;
+                          case 2:
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              cout << "\n| - Nome do arquivo a ser copiado para disco => ";
+                              scanf("%s", file_name);
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              deu_certo = file_system.copy_system_to_disk(file_name);
+                          case 3:
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              cout << "\n| - Nome do arquivo a ser removido: ";
+                              scanf("%s", file_name);
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              file_system.remove_file(file_name);
+                              break;
+                          case 4:
+                              cout << endl;
+                              file_system.list_files();
+                              break;
+                          case 0:
+                              cout << "Voltando ao menu principal..." << endl;
+                              break;
+                          default:
+                              cout << "Opção inválida! Tente novamente." << endl;
+                              break;
+                      }
+                  } while (subEscolha != 0);
+              }
+              break;
+          case 2:{
+              cout << "\n|---------------------------------------------------|" << endl;
+              cout << "| - Nome do Sistema existente: ";
+              scanf("%s", file_system_name);
+              cout << "\n|---------------------------------------------------|" << endl;
+              file_system.file_system_already_created(file_system_name);
+              int subEscolha;
+              do {
+                      cout << "|---------------------------------------------------|" << endl;
+                      cout << "|                 SUBMENU - Opção 2                 |" << endl;
+                      cout << "|---------------------------------------------------|" << endl;
+                      cout << "|                                                   |" << endl;
+                      cout << "| 1. Copiar do disco para o sistema.                |" << endl;
+                      cout << "| 2. Copiar do sistema para o disco.                |" << endl;
+                      cout << "| 3. Remover um arquivo do sistema.                 |" << endl;
+                      cout << "| 4. Listar todos os arquivos do sistema.           |" << endl;
+                      cout << "| 0. Voltar ao menu principal                       |" << endl;
+                      cout << "|                                                   |" << endl;
+                      cout << "|---------------------------------------------------|" << endl;
+                      cout << "Selecione uma opção (número correspondente) => ";
+                      cin >> subEscolha;
+
+                      switch (subEscolha) {
+                          case 1:
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              cout << "\n| - Nome do arquivo a ser inserido => ";
+                              scanf("%s", file_name);
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              deu_certo = file_system.copy_disk_to_system(file_name);
+
+                              if (!deu_certo){
+                                cout << "\n|---------------------------------------------------|" << endl;
+                                cout << "| - Nao foi possivel inserir\n";
+                                cout << "|---------------------------------------------------|" << endl;
+                              }
+                              cout << "\n";
+                              break;
+                          case 2:
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              cout << "\n| - Nome do arquivo a ser copiado para disco => ";
+                              scanf("%s", file_name);
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              deu_certo = file_system.copy_system_to_disk(file_name);
+                              break;
+                          case 3:
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              cout << "\n| - Nome do arquivo a ser removido: ";
+                              scanf("%s", file_name);
+                              cout << "\n|---------------------------------------------------|" << endl;
+                              file_system.remove_file(file_name);
+                              break;
+                          case 4:
+                              cout << endl;
+                              file_system.list_files();
+                              break;
+                          case 0:
+                              cout << "Voltando ao menu principal..." << endl;
+                              break;
+                          default:
+                              cout << "Opção inválida! Tente novamente." << endl;
+                              break;
+                      }
+                  } while (subEscolha != 0);
+              }
+              break;
+          case 0:
+              cout << "Saindo do sistema..." << endl;
+              break;
+          default:
+              cout << "Opção inválida! Tente novamente." << endl;
+              limparBuffer();
+              break;
       }
-      cout << "\n";
-    }
-    else if (choice == 1) {
-      cout << "\nNome do arquivo a ser copiado para disco: ";
-      scanf("%s", file_name);
-      deu_certo = file_system.copy_system_to_disk(file_name);
 
-      // if (!deu_certo){
-      //   cout << "Nao foi possivel inserir\n";
-      // }
-      // cout << "\n";
-    }
-    else if(choice == 2) {
-      cout << "\nNome do arquivo a ser removido: ";
-      scanf("%s", file_name);
-      file_system.remove_file(file_name);
-    }
-    else if (choice == 3) {
-        file_system.list_files();
-    }
-    else {
-      return 0;
-    }
-  }
+  } while (escolha != 0);
+
   return 0;
 }
