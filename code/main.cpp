@@ -293,7 +293,7 @@ class File_system {
       teste[32] = '\0';
 
       for(int i = 0; i < ceil(float(file_size)/32); i++) { // para cada 32 bytes de dados a ser inseridos
-        //for(int zera = 0; zera < 32; zera++){teste[zera] = 0;}
+
 
         if(i+1 == ceil(float(file_size)/32)) { // se estiver no fim do dado a ser inserido e ele não ocupar exatamente 32 bytes
           fseek(insert_file, i*32, SEEK_SET);
@@ -443,7 +443,7 @@ class File_system {
           }
         }
         fseek(system_file, this->get_bitmap_position() + (aux_entrie.first_sector/512) + i, SEEK_SET);
-        // printf("Reader: %d\n", reader);
+
 
         fwrite(&reader, sizeof(reader), 1, system_file); // reescreve o byte com a alteração do bit
       }
