@@ -159,7 +159,6 @@ class File_system {
         if(i+1 == ceil(float(aux_entrie.size_in_bytes))) {
           resto = aux_entrie.size_in_bytes % 512;
           fread(reader_arq, resto, 1, system_file);
-          cout << reader_arq;
           reader_arq[resto+1] = '\0';
 
           fwrite(reader_arq, resto, 1, new_file_in_disk);
@@ -197,7 +196,7 @@ class File_system {
 
         if(aux_entrie.name[0] == 0){
           is_zero = true;
-        }else if(aux_entrie.name[0] == 229){
+        }else if(aux_entrie.name[0] == -27){
           pos_rootdir += 32;
           fseek(system_file, pos_rootdir, SEEK_SET);
         } else{
@@ -239,7 +238,7 @@ class File_system {
       for(int i = 0; i < 192; i++) { // verifica se ha espaço para inserção de mais um arquivo
         fread(&aux_entrie, 32, 1, system_file);
 
-        if (aux_entrie.name[0] == 0 || aux_entrie.name[0] == 0xE5) {
+        if (aux_entrie.name[0] == 0 || aux_entrie.name[0] == -27) {
           has_space_in_rd= 1;
           rd_new_file_position = i;
           break;
@@ -469,11 +468,11 @@ int main()
       cout << "|---------------------------------------------------|" << endl;
       cout << "|                                                   |" << endl;
       cout << "| 1. Criar novo sistema.                            |" << endl;
-      cout << "| 2. Utilizar um sistema já existente.              |" << endl;
+      cout << "| 2. Utilizar um sistema ja existente.              |" << endl;
       cout << "| 0. Sair                                           |" << endl;
       cout << "|                                                   |" << endl;
       cout << "|---------------------------------------------------|" << endl;
-      cout << "Selecione uma opção (número correspondente) => ";
+      cout << "Selecione uma opcao (numero correspondente) => ";
       cin >> escolha;
 
       switch (escolha) {
@@ -483,14 +482,14 @@ int main()
                   scanf("%s", file_system_name);
                   cout << "\n|---------------------------------------------------|" << endl;
                   cout << "\n|---------------------------------------------------|" << endl;
-                  cout << "Quantida de setores: ";
+                  cout << "Quantidade de setores: ";
                   scanf("%d", &amount_of_sectors);
                   cout << "\n|---------------------------------------------------|" << endl;
                   file_system.file_system_not_created(file_system_name, amount_of_sectors);
                   int subEscolha;
                   do {
                       cout << "|---------------------------------------------------|" << endl;
-                      cout << "|                 SUBMENU - Opção 1                 |" << endl;
+                      cout << "|                 SUBMENU - Opcao 1                 |" << endl;
                       cout << "|---------------------------------------------------|" << endl;
                       cout << "|                                                   |" << endl;
                       cout << "| 1. Copiar do disco para o sistema.                |" << endl;
@@ -500,7 +499,7 @@ int main()
                       cout << "| 0. Voltar ao menu principal                       |" << endl;
                       cout << "|                                                   |" << endl;
                       cout << "|---------------------------------------------------|" << endl;
-                      cout << "Selecione uma opção (número correspondente) => ";
+                      cout << "Selecione uma opcao (numero correspondente) => ";
                       cin >> subEscolha;
 
                       switch (subEscolha) {
@@ -524,6 +523,7 @@ int main()
                               scanf("%s", file_name);
                               cout << "\n|---------------------------------------------------|" << endl;
                               deu_certo = file_system.copy_system_to_disk(file_name);
+                              break;
                           case 3:
                               cout << "\n|---------------------------------------------------|" << endl;
                               cout << "\n| - Nome do arquivo a ser removido: ";
@@ -539,7 +539,7 @@ int main()
                               cout << "Voltando ao menu principal..." << endl;
                               break;
                           default:
-                              cout << "Opção inválida! Tente novamente." << endl;
+                              cout << "Opcao invalida! Tente novamente." << endl;
                               break;
                       }
                   } while (subEscolha != 0);
@@ -554,7 +554,7 @@ int main()
               int subEscolha;
               do {
                       cout << "|---------------------------------------------------|" << endl;
-                      cout << "|                 SUBMENU - Opção 2                 |" << endl;
+                      cout << "|                 SUBMENU - Opcao 2                 |" << endl;
                       cout << "|---------------------------------------------------|" << endl;
                       cout << "|                                                   |" << endl;
                       cout << "| 1. Copiar do disco para o sistema.                |" << endl;
@@ -564,7 +564,7 @@ int main()
                       cout << "| 0. Voltar ao menu principal                       |" << endl;
                       cout << "|                                                   |" << endl;
                       cout << "|---------------------------------------------------|" << endl;
-                      cout << "Selecione uma opção (número correspondente) => ";
+                      cout << "Selecione uma opcao (numero correspondente) => ";
                       cin >> subEscolha;
 
                       switch (subEscolha) {
@@ -604,7 +604,7 @@ int main()
                               cout << "Voltando ao menu principal..." << endl;
                               break;
                           default:
-                              cout << "Opção inválida! Tente novamente." << endl;
+                              cout << "Opção invalida! Tente novamente." << endl;
                               break;
                       }
                   } while (subEscolha != 0);
@@ -614,7 +614,7 @@ int main()
               cout << "Saindo do sistema..." << endl;
               break;
           default:
-              cout << "Opção inválida! Tente novamente." << endl;
+              cout << "Opção invalida! Tente novamente." << endl;
               limparBuffer();
               break;
       }
