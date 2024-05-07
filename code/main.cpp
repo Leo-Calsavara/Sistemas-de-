@@ -144,9 +144,14 @@ class File_system {
       root_directoty_entrie aux_entrie;
 
       system_file = fopen(this->file_system_name, "rb");
-      new_file_in_disk = fopen(file_name_on_system, "w+b");
+      
 
       aux_entrie = this->get_rd_entrie(file_name_on_system);
+
+      if(aux_entrie.name[0] == 0){
+        return 0;
+      }
+      new_file_in_disk = fopen(file_name_on_system, "w+b");
 
       fseek(system_file, this->get_data_position() + aux_entrie.first_sector * this->bytes_per_sector, SEEK_SET);
       
@@ -245,6 +250,7 @@ class File_system {
         }
       }
       if(has_space_in_rd == 0) {// se nao houver espaco no root dir return
+        cout<<"Diretorio raiz cheio" << endl;
         return 0; 
       }
 
