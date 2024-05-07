@@ -189,7 +189,11 @@ class File_system {
 
       while(!is_zero){
 
-        fread(&aux_entrie, 32, 1, system_file);
+        fread(&aux_entrie.name, sizeof(aux_entrie.name), 1, system_file);
+        fread(&aux_entrie.extension, sizeof(aux_entrie.extension), 1, system_file);
+        fread(&aux_entrie.size_in_bytes, sizeof(aux_entrie.size_in_bytes), 1, system_file);
+        fread(&aux_entrie.type, sizeof(aux_entrie.type), 1, system_file);
+        fread(&aux_entrie.first_sector, sizeof(aux_entrie.first_sector), 1, system_file);
 
         if(aux_entrie.name[0] == 0){
           is_zero = true;
